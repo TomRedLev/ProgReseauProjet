@@ -1,0 +1,25 @@
+Network Programmation                                           L. Jouannisson
+Group 2                                                               T. Redon
+M1 IT                                                                      UGE
+                                                                 February 2021
+
+
+                            THE CHATOS PROTOCOL
+
+
+Summary
+
+    ChatOS is a very simple protocol used to transfer messages between users.
+    It will be able to connect separately a group of persons in a general chat
+    or just between 2 users in a private connection. Each nonterminal packet
+    is acknowledged separately.  This document describes the protocol and its
+    types of packets.  The document also explains the reasons behind some of
+    the design decisions.
+
+Acknowlegements
+
+       The protocol was originally designed by Loïc Jouannisson and Tom Redon.
+       It will evolve with the time and the suggestion given by the teaching
+       staff.
+
+       The first version as been writen between February and March 2021
