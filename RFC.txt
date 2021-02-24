@@ -22,4 +22,6 @@ Acknowlegements
        It will evolve with the time and the suggestion given by the teaching
        staff.
 
-       The first version as been writen between February and March 2021
+       The first version has been writen between February and March 2021.
+
+       
