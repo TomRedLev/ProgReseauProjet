@@ -26,6 +26,7 @@ public class ClientChat {
         final private ByteBuffer bbout = ByteBuffer.allocate(BUFFER_SIZE);
         final private Queue<ByteBuffer> queue = new LinkedList<>(); // buffers read-mode
         final private MessageReader messageReader = new MessageReader();
+        final private ByteReader byteReader = new ByteReader();
         private boolean closed = false;
 
         private Context(SelectionKey key){
@@ -42,19 +43,39 @@ public class ClientChat {
          */
         private void processIn() {
            for(;;) {
-        	   Reader.ProcessStatus status = messageReader.process(bbin);
-        	   if (status == ProcessStatus.DONE) {
-        		   Message msg =  messageReader.get();
-        		   System.out.println(msg.getLogin() + " : " + msg.getStr());
-        		   messageReader.reset();
+        	   Reader.ProcessStatus statusOP = byteReader.process(bbin);
+        	   if (statusOP == ProcessStatus.DONE) {
+	        		   switch (byteReader.get()) {
+	        		   case 0 :
+	        			   Reader.ProcessStatus status = messageReader.process(bbin);
+	                	   if (status == ProcessStatus.DONE) {
+	                		   Message msg =  messageReader.get();
+	                		   System.out.println(msg.getLogin() + " : " + msg.getStr());
+	                		   messageReader.reset();
+	                	   }
+	                	   else if (status == ProcessStatus.REFILL) {
+	                		   return;
+	                	   }
+	                	   else if (status == ProcessStatus.ERROR) {
+	                		   silentlyClose();
+	                		   return ;
+	                	   }
+	                	   break;
+	                   default : 
+	                	   System.out.println("This OP code isn't allowed");
+        		   }
         	   }
-        	   else if (status == ProcessStatus.REFILL) {
+        	   else if (statusOP == ProcessStatus.REFILL) {
         		   return;
         	   }
-        	   else if (status == ProcessStatus.ERROR) {
+        	   else if (statusOP == ProcessStatus.ERROR) {
         		   silentlyClose();
         		   return ;
         	   }
+        	   
+        	   
+        	   
+        	   
            }
         }
 
@@ -78,6 +99,7 @@ public class ClientChat {
                 var bb = queue.peek();
                 if (bb.remaining()<=bbout.remaining()){
                     queue.remove();
+                    bbout.put((byte) 0);
                     bbout.put(bb);
                 } else {
                     break;

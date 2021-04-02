@@ -13,6 +13,8 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import fr.upem.net.tcp.nonblocking.Reader.ProcessStatus;
+
 public class ServerChat {
 
     static private class Context {
@@ -26,6 +28,7 @@ public class ServerChat {
         
         private final Charset UTF8_CHARSET = Charset.forName("UTF-8");
         private final MessageReader messageReader = new MessageReader();
+        final private ByteReader byteReader = new ByteReader();
         private boolean closed = false;
 
         private Context(ServerChat server, SelectionKey key){
@@ -43,20 +46,37 @@ public class ServerChat {
          */
         private void processIn() {
         	for(;;){
-    		   Reader.ProcessStatus status = messageReader.process(bbin);
-    		   switch (status){
-    		      case DONE:
-    		          var msg = messageReader.get();
-    		          System.out.println(msg.getLogin() + " : " + msg.getStr());
-    		          server.broadcast(msg);
-    		          messageReader.reset();
-    		          break;
-    		      case REFILL:
-    		          return;
-    		      case ERROR:
-    		          silentlyClose();
-    		          return;
-        		}
+        		Reader.ProcessStatus statusOP = byteReader.process(bbin);
+         	   	if (statusOP == ProcessStatus.DONE) {
+ 	        		   switch (byteReader.get()) {
+ 	        		   case 0 :
+ 	        			   byteReader.reset();
+			    		   Reader.ProcessStatus status = messageReader.process(bbin);
+			    		   switch (status){
+			    		      case DONE:
+			    		          var msg = messageReader.get();
+			    		          System.out.println(msg.getLogin() + " : " + msg.getStr());
+			    		          server.broadcast(msg);
+			    		          messageReader.reset();
+			    		          break;
+			    		      case REFILL:
+			    		          return;
+			    		      case ERROR:
+			    		          silentlyClose();
+			    		          return;
+			        		}
+			    		   	break;
+ 	        		   default : 
+	                	   System.out.println("This OP code isn't allowed");
+ 	        		   }
+         	   	}
+         	   else if (statusOP == ProcessStatus.REFILL) {
+        		   return;
+        	   }
+        	   else if (statusOP == ProcessStatus.ERROR) {
+        		   silentlyClose();
+        		   return ;
+        	   }
         	}
         	
         }
@@ -85,6 +105,7 @@ public class ServerChat {
                 var bb = UTF8_CHARSET.encode(str);
                 if (bbLog.remaining() + bb.remaining() + 2 * Integer.BYTES <= bbout.remaining()){
                     queue.remove();
+                    bbout.put((byte) 0);
                     bbout.putInt(login.length());
                     bbout.put(bbLog);
                     bbout.putInt(str.length());
