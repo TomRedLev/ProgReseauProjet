@@ -47,6 +47,7 @@ public class ClientChat {
         	   if (statusOP == ProcessStatus.DONE) {
 	        		   switch (byteReader.get()) {
 	        		   case 0 :
+	        			   byteReader.reset();
 	        			   Reader.ProcessStatus status = messageReader.process(bbin);
 	                	   if (status == ProcessStatus.DONE) {
 	                		   Message msg =  messageReader.get();

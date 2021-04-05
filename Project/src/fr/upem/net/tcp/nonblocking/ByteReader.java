@@ -7,7 +7,7 @@ public class ByteReader implements Reader<Byte> {
     private enum State {DONE,WAITING,ERROR};
 
     private State state = State.WAITING;
-    private final ByteBuffer internalbb = ByteBuffer.allocate(Integer.BYTES); // write-mode
+    private final ByteBuffer internalbb = ByteBuffer.allocate(Byte.BYTES); // write-mode
     private Byte value;
 
     @Override

@@ -48,27 +48,28 @@ public class ServerChat {
         	for(;;){
         		Reader.ProcessStatus statusOP = byteReader.process(bbin);
          	   	if (statusOP == ProcessStatus.DONE) {
- 	        		   switch (byteReader.get()) {
- 	        		   case 0 :
- 	        			   byteReader.reset();
-			    		   Reader.ProcessStatus status = messageReader.process(bbin);
-			    		   switch (status){
-			    		      case DONE:
-			    		          var msg = messageReader.get();
-			    		          System.out.println(msg.getLogin() + " : " + msg.getStr());
-			    		          server.broadcast(msg);
-			    		          messageReader.reset();
-			    		          break;
-			    		      case REFILL:
-			    		          return;
-			    		      case ERROR:
-			    		          silentlyClose();
-			    		          return;
-			        		}
-			    		   	break;
- 	        		   default : 
-	                	   System.out.println("This OP code isn't allowed");
- 	        		   }
+					var OPcode = byteReader.get();
+					switch (OPcode) {
+						case 0 :
+							byteReader.reset();
+							Reader.ProcessStatus status = messageReader.process(bbin);
+							switch (status){
+						    	case DONE:
+						    		var msg = messageReader.get();
+						    		System.out.println(msg.getLogin() + " : " + msg.getStr());
+						    		server.broadcast(msg);
+						    		messageReader.reset();
+						    		break;
+						    	case REFILL:
+						    		return;
+						    	case ERROR:
+						    		silentlyClose();
+						    		return;
+							}
+						   	break;
+						default : 
+							System.out.println("This OP code isn't allowed");
+					}
          	   	}
          	   else if (statusOP == ProcessStatus.REFILL) {
         		   return;
