@@ -22,16 +22,21 @@ public class ClientChat {
 
         final private SelectionKey key;
         final private SocketChannel sc;
+        final private ClientChat client;
         final private ByteBuffer bbin = ByteBuffer.allocate(BUFFER_SIZE);
         final private ByteBuffer bbout = ByteBuffer.allocate(BUFFER_SIZE);
         final private Queue<ByteBuffer> queue = new LinkedList<>(); // buffers read-mode
         final private MessageReader messageReader = new MessageReader();
         final private ByteReader byteReader = new ByteReader();
         private boolean closed = false;
+        
+        private int connectID = 1;
+        private boolean connected = true; // A modifier
 
-        private Context(SelectionKey key){
+        private Context(ClientChat client, SelectionKey key){
             this.key = key;
             this.sc = (SocketChannel) key.channel();
+            this.client = client;
         }
 
         /**
@@ -45,8 +50,17 @@ public class ClientChat {
            for(;;) {
         	   Reader.ProcessStatus statusOP = byteReader.process(bbin);
         	   if (statusOP == ProcessStatus.DONE) {
-	        		   switch (byteReader.get()) {
-	        		   case 0 :
+        		   var OPcode = byteReader.get();
+				   byteReader.reset();   
+        		   switch (OPcode) {
+        		   	   case 1 :
+        		   		   connected = true;
+        		   		   break;
+        		   	   case 2 : 
+        		   		   System.out.println("This login is already taken, an int will be added at the end : ");
+        		   		   client.login = client.login + connectID;
+        		   		   System.out.println(client.login);
+	        		   case 3 :
 	        			   byteReader.reset();
 	        			   Reader.ProcessStatus status = messageReader.process(bbin);
 	                	   if (status == ProcessStatus.DONE) {
@@ -100,7 +114,6 @@ public class ClientChat {
                 var bb = queue.peek();
                 if (bb.remaining()<=bbout.remaining()){
                     queue.remove();
-                    bbout.put((byte) 0);
                     bbout.put(bb);
                 } else {
                     break;
@@ -169,7 +182,11 @@ public class ClientChat {
 
         private void doWrite() throws IOException {
             bbout.flip();
-            sc.write(bbout);
+            if (!connected){
+            	
+            } else {
+            	sc.write(bbout);
+            }
             bbout.compact();
             processOut();
             updateInterestOps();
@@ -191,7 +208,7 @@ public class ClientChat {
     private final SocketChannel sc;
     private final Selector selector;
     private final InetSocketAddress serverAddress;
-    private final String login;
+    private String login;
     private final Thread console;
     private final ArrayBlockingQueue<String> commandQueue = new ArrayBlockingQueue<>(10);
     private Context uniqueContext;
@@ -238,11 +255,19 @@ public class ClientChat {
      */
 
     private void processCommands(){
+    	if (!uniqueContext.connected) {
+    		var bbLog = UTF8_CHARSET.encode(login);
+    		var bb = ByteBuffer.allocate(1 + bbLog.remaining() + Integer.BYTES);
+    		bb.put((byte) 0);
+    		bb.put(bbLog);
+    		uniqueContext.queueMessage(bb);
+    	}
         while (!commandQueue.isEmpty()) {
         	var msg = commandQueue.remove();
         	var bbLog = UTF8_CHARSET.encode(login);
         	var bbStr = UTF8_CHARSET.encode(msg);
-        	var bb = ByteBuffer.allocate(bbLog.remaining() + bbStr.remaining() + Integer.BYTES * 2);
+        	var bb = ByteBuffer.allocate(1 + bbLog.remaining() + bbStr.remaining() + Integer.BYTES * 2);
+        	bb.put((byte) 3);
         	bb.putInt(bbLog.remaining());
         	bb.put(bbLog);
         	bb.putInt(bbStr.remaining());
@@ -255,7 +280,7 @@ public class ClientChat {
     public void launch() throws IOException {
         sc.configureBlocking(false);
         var key = sc.register(selector, SelectionKey.OP_CONNECT);
-        uniqueContext = new Context(key);
+        uniqueContext = new Context(this, key);
         key.attach(uniqueContext);
         sc.connect(serverAddress);
 

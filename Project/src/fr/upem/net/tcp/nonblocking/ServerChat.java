@@ -28,7 +28,9 @@ public class ServerChat {
         
         private final Charset UTF8_CHARSET = Charset.forName("UTF-8");
         private final MessageReader messageReader = new MessageReader();
-        final private ByteReader byteReader = new ByteReader();
+        private final ByteReader byteReader = new ByteReader();
+        private final StringReader stringReader = new StringReader();
+        
         private boolean closed = false;
 
         private Context(ServerChat server, SelectionKey key){
@@ -49,14 +51,29 @@ public class ServerChat {
         		Reader.ProcessStatus statusOP = byteReader.process(bbin);
          	   	if (statusOP == ProcessStatus.DONE) {
 					var OPcode = byteReader.get();
+					byteReader.reset();
 					switch (OPcode) {
 						case 0 :
-							byteReader.reset();
+							Reader.ProcessStatus statusString = stringReader.process(bbin);
+							switch (statusString) {
+								case DONE : 
+									var login = stringReader.get();
+						    		// Renvoyer le login
+									System.out.println(login);
+						    		stringReader.reset();
+						    		break;
+								case REFILL :
+									return;
+								case ERROR :
+									silentlyClose();
+									return;
+							}
+							break;
+						case 3 :
 							Reader.ProcessStatus status = messageReader.process(bbin);
 							switch (status){
 						    	case DONE:
 						    		var msg = messageReader.get();
-						    		System.out.println(msg.getLogin() + " : " + msg.getStr());
 						    		server.broadcast(msg);
 						    		messageReader.reset();
 						    		break;
@@ -106,7 +123,7 @@ public class ServerChat {
                 var bb = UTF8_CHARSET.encode(str);
                 if (bbLog.remaining() + bb.remaining() + 2 * Integer.BYTES <= bbout.remaining()){
                     queue.remove();
-                    bbout.put((byte) 0);
+                    bbout.put((byte) 3);
                     bbout.putInt(login.length());
                     bbout.put(bbLog);
                     bbout.putInt(str.length());
