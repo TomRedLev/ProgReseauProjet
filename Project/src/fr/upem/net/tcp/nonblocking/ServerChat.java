@@ -32,6 +32,7 @@ public class ServerChat {
         private final StringReader stringReader = new StringReader();
         
         private boolean closed = false;
+        private boolean connected = false;
 
         private Context(ServerChat server, SelectionKey key){
             this.key = key;
@@ -57,9 +58,22 @@ public class ServerChat {
 							Reader.ProcessStatus statusString = stringReader.process(bbin);
 							switch (statusString) {
 								case DONE : 
-									var login = stringReader.get();
-						    		// Renvoyer le login
-									System.out.println(login);
+									if (!connected) {
+										var login = stringReader.get();
+							    		if (!server.clientsName.contains(login)) {
+							    			System.out.println("Connection accepted");
+							    			bbout.clear();
+							    			bbout.put((byte) 1);
+							    			server.clientsName.add(login);
+							    			connected = true;
+							    			updateInterestOps();
+							    		} else {
+							    			System.out.println("Connection refused");
+							    			bbout.clear();
+							    			bbout.put((byte) 2);
+							    			updateInterestOps();
+							    		}
+									}
 						    		stringReader.reset();
 						    		break;
 								case REFILL :
@@ -205,6 +219,7 @@ public class ServerChat {
 
     private final ServerSocketChannel serverSocketChannel;
     private final Selector selector;
+    private final ArrayList<String> clientsName = new ArrayList<>();
 
     public ServerChat(int port) throws IOException {
         serverSocketChannel = ServerSocketChannel.open();

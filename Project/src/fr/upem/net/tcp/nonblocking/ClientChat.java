@@ -30,8 +30,8 @@ public class ClientChat {
         final private ByteReader byteReader = new ByteReader();
         private boolean closed = false;
         
-        private int connectID = 1;
-        private boolean connected = true; // A modifier
+        private int connectID = 0;
+        private boolean connected = false; // A modifier
 
         private Context(ClientChat client, SelectionKey key){
             this.key = key;
@@ -54,12 +54,15 @@ public class ClientChat {
 				   byteReader.reset();   
         		   switch (OPcode) {
         		   	   case 1 :
+        		   		   System.out.println("You are connected !");
         		   		   connected = true;
         		   		   break;
         		   	   case 2 : 
         		   		   System.out.println("This login is already taken, an int will be added at the end : ");
-        		   		   client.login = client.login + connectID;
-        		   		   System.out.println(client.login);
+        		   		   client.login = client.login.split("#")[0];
+        		   		   connectID += 1;
+        		   		   client.login = client.login + "#" + connectID;
+        		   		   System.out.println("Now, you are : " + client.login);
 	        		   case 3 :
 	        			   byteReader.reset();
 	        			   Reader.ProcessStatus status = messageReader.process(bbin);
@@ -182,11 +185,7 @@ public class ClientChat {
 
         private void doWrite() throws IOException {
             bbout.flip();
-            if (!connected){
-            	
-            } else {
-            	sc.write(bbout);
-            }
+            sc.write(bbout);
             bbout.compact();
             processOut();
             updateInterestOps();
@@ -223,6 +222,10 @@ public class ClientChat {
 
     private void consoleRun() {
         try (var scan = new Scanner(System.in)) { 
+        	while (!uniqueContext.connected) {
+        		processCommands();
+        		selector.wakeup();
+        	}
             while (scan.hasNextLine()) {
             	synchronized (lock) {
 	                var msg = scan.nextLine();
@@ -259,7 +262,9 @@ public class ClientChat {
     		var bbLog = UTF8_CHARSET.encode(login);
     		var bb = ByteBuffer.allocate(1 + bbLog.remaining() + Integer.BYTES);
     		bb.put((byte) 0);
+    		bb.putInt(bbLog.remaining());
     		bb.put(bbLog);
+    		bb.flip();
     		uniqueContext.queueMessage(bb);
     	}
         while (!commandQueue.isEmpty()) {
