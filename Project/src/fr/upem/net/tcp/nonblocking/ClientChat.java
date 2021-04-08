@@ -79,6 +79,22 @@ public class ClientChat {
 	                		   return ;
 	                	   }
 	                	   break;
+	        		   case 4 :
+	        			   byteReader.reset();
+	        			   Reader.ProcessStatus statusPM = messageReader.process(bbin);
+	                	   if (statusPM == ProcessStatus.DONE) {
+	                		   Message msg =  messageReader.get();
+	                		   System.out.println("PM from " + msg.getLogin() + " : " + msg.getStr());
+	                		   messageReader.reset();
+	                	   }
+	                	   else if (statusPM == ProcessStatus.REFILL) {
+	                		   return;
+	                	   }
+	                	   else if (statusPM == ProcessStatus.ERROR) {
+	                		   silentlyClose();
+	                		   return ;
+	                	   }
+	                	   break;
 	                   default : 
 	                	   System.out.println("This OP code isn't allowed");
         		   }
@@ -272,9 +288,25 @@ public class ClientChat {
         	var bbLog = UTF8_CHARSET.encode(login);
         	var bbStr = UTF8_CHARSET.encode(msg);
         	var bb = ByteBuffer.allocate(1 + bbLog.remaining() + bbStr.remaining() + Integer.BYTES * 2);
-        	bb.put((byte) 3);
-        	bb.putInt(bbLog.remaining());
-        	bb.put(bbLog);
+        	if (msg.startsWith("/")) {
+        		var sb = new StringBuilder(msg);
+        		sb.deleteCharAt(0);
+        		msg = sb.toString();
+        		var msgArray = msg.split(" ", 2);
+        		bbStr = UTF8_CHARSET.encode(msgArray[1]);
+        		var bbLogTarget = UTF8_CHARSET.encode(msgArray[0]);
+        		bb = ByteBuffer.allocate(1 + bbLog.remaining() + bbLogTarget.remaining() + bbStr.remaining() + Integer.BYTES * 3);
+        		bb.put((byte) 4);
+        		bb.putInt(bbLog.remaining());
+            	bb.put(bbLog);
+            	bb.putInt(bbLogTarget.remaining());
+            	bb.put(bbLogTarget);
+        	} else {
+        		bb.put((byte) 3);
+        		bb.putInt(bbLog.remaining());
+            	bb.put(bbLog);
+        	}
+        	
         	bb.putInt(bbStr.remaining());
         	bb.put(bbStr);
         	bb.flip();

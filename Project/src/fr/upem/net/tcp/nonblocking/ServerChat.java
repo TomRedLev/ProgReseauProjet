@@ -30,9 +30,11 @@ public class ServerChat {
         private final MessageReader messageReader = new MessageReader();
         private final ByteReader byteReader = new ByteReader();
         private final StringReader stringReader = new StringReader();
+        private final PMReader PMReader = new PMReader();
         
         private boolean closed = false;
         private boolean connected = false;
+        private String clientName = "";
 
         private Context(ServerChat server, SelectionKey key){
             this.key = key;
@@ -65,6 +67,7 @@ public class ServerChat {
 							    			bbout.clear();
 							    			bbout.put((byte) 1);
 							    			server.clientsName.add(login);
+							    			clientName = login;
 							    			connected = true;
 							    			updateInterestOps();
 							    		} else {
@@ -98,6 +101,21 @@ public class ServerChat {
 						    		return;
 							}
 						   	break;
+						case 4 :
+							Reader.ProcessStatus statusPM = PMReader.process(bbin);
+							switch (statusPM){
+						    	case DONE:
+						    		var msg = PMReader.get();
+						    		server.sendPM(msg);
+						    		PMReader.reset();
+						    		break;
+						    	case REFILL:
+						    		return;
+						    	case ERROR:
+						    		silentlyClose();
+						    		return;
+							}
+							break;
 						default : 
 							System.out.println("This OP code isn't allowed");
 					}
@@ -118,9 +136,9 @@ public class ServerChat {
          *
          * @param msg
          */
-        private void queueMessage(Message msg) {
+        private void queueMessage(Message msg, boolean pm) {
         	queue.add(msg);
-        	processOut();
+        	processOut(pm);
         	updateInterestOps();
         }
 
@@ -128,7 +146,7 @@ public class ServerChat {
          * Try to fill bbout from the message queue
          *
          */
-        private void processOut() {
+        private void processOut(boolean pm) {
         	while (!queue.isEmpty()){
                 var msg = queue.peek();
                 var login = msg.getLogin();
@@ -137,7 +155,11 @@ public class ServerChat {
                 var bb = UTF8_CHARSET.encode(str);
                 if (bbLog.remaining() + bb.remaining() + 2 * Integer.BYTES <= bbout.remaining()){
                     queue.remove();
-                    bbout.put((byte) 3);
+                    if (!pm) {
+                    	bbout.put((byte) 3);
+                    } else {
+                    	bbout.put((byte) 4);
+                    }
                     bbout.putInt(login.length());
                     bbout.put(bbLog);
                     bbout.putInt(str.length());
@@ -227,7 +249,19 @@ public class ServerChat {
         selector = Selector.open();
     }
 
-    public void launch() throws IOException {
+    public void sendPM(PM msg) {
+    	for (var key : selector.keys()) {
+    		var ctxt = (Context) key.attachment();
+    		if (ctxt != null && ctxt.clientName.equals(msg.getLoginTarget())) {
+    			var message = new Message();
+    			message.setLogin(msg.getLoginSender());
+    			message.setStr(msg.getStr());
+        		ctxt.queueMessage(message, true);
+    		}
+    	}
+	}
+
+	public void launch() throws IOException {
 		serverSocketChannel.configureBlocking(false);
 		serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
 		while(!Thread.interrupted()) {
@@ -294,7 +328,7 @@ public class ServerChat {
     	for (var key : selector.keys()) {
     		var ctxt = (Context) key.attachment();
     		if (ctxt != null) {
-    			ctxt.queueMessage(msg);
+    			ctxt.queueMessage(msg, false);
     		}
     	}
     }
