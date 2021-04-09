@@ -31,7 +31,8 @@ public class ClientChat {
         private boolean closed = false;
         
         private int connectID = 0;
-        private boolean connected = false; // A modifier
+        private boolean connected = false;
+        private byte OPcode = 127;
 
         private Context(ClientChat client, SelectionKey key){
             this.key = key;
@@ -48,10 +49,16 @@ public class ClientChat {
          */
         private void processIn() {
            for(;;) {
-        	   Reader.ProcessStatus statusOP = byteReader.process(bbin);
-        	   if (statusOP == ProcessStatus.DONE) {
-        		   var OPcode = byteReader.get();
-				   byteReader.reset();   
+        	   Reader.ProcessStatus statusOP = null;
+        	   if (OPcode == 127) {
+        		   statusOP = byteReader.process(bbin);
+       		   }
+        	   if (OPcode != 127 || statusOP == ProcessStatus.DONE) {
+        		   if (OPcode == 127) {
+        	   			OPcode = byteReader.get();
+        	   			byteReader.reset();
+        	   		}
+        		   System.out.println(OPcode);  
         		   switch (OPcode) {
         		   	   case 1 :
         		   		   System.out.println("You are connected !");
@@ -63,6 +70,7 @@ public class ClientChat {
         		   		   connectID += 1;
         		   		   client.login = client.login + "#" + connectID;
         		   		   System.out.println("Now, you are : " + client.login);
+        		   		   break;
 	        		   case 3 :
 	        			   byteReader.reset();
 	        			   Reader.ProcessStatus status = messageReader.process(bbin);
@@ -95,6 +103,8 @@ public class ClientChat {
 	                		   return ;
 	                	   }
 	                	   break;
+	        		   case 127 :
+	        			   break;
 	                   default : 
 	                	   System.out.println("This OP code isn't allowed");
         		   }
@@ -107,7 +117,7 @@ public class ClientChat {
         		   return ;
         	   }
         	   
-        	   
+        	   OPcode = 127;
         	   
         	   
            }

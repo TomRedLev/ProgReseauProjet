@@ -35,6 +35,7 @@ public class ServerChat {
         private boolean closed = false;
         private boolean connected = false;
         private String clientName = "";
+        private byte OPcode = 127;
 
         private Context(ServerChat server, SelectionKey key){
             this.key = key;
@@ -51,10 +52,16 @@ public class ServerChat {
          */
         private void processIn() {
         	for(;;){
-        		Reader.ProcessStatus statusOP = byteReader.process(bbin);
-         	   	if (statusOP == ProcessStatus.DONE) {
-					var OPcode = byteReader.get();
-					byteReader.reset();
+        		Reader.ProcessStatus statusOP = null;
+        		if (OPcode == 127) {
+        			statusOP = byteReader.process(bbin);
+        		}
+         	   	if (OPcode != 127 || statusOP == ProcessStatus.DONE) {
+         	   		if (OPcode == 127) {
+         	   			OPcode = byteReader.get();
+         	   			byteReader.reset();
+         	   		}
+         	   		System.out.println(OPcode);
 					switch (OPcode) {
 						case 0 :
 							Reader.ProcessStatus statusString = stringReader.process(bbin);
@@ -87,6 +94,7 @@ public class ServerChat {
 							}
 							break;
 						case 3 :
+							System.out.println("message");
 							Reader.ProcessStatus status = messageReader.process(bbin);
 							switch (status){
 						    	case DONE:
@@ -116,6 +124,8 @@ public class ServerChat {
 						    		return;
 							}
 							break;
+						case 127 :
+							break;
 						default : 
 							System.out.println("This OP code isn't allowed");
 					}
@@ -127,8 +137,8 @@ public class ServerChat {
         		   silentlyClose();
         		   return ;
         	   }
+         	   OPcode = 127;
         	}
-        	
         }
 
         /**
