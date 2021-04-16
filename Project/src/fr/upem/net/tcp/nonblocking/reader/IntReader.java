@@ -1,14 +1,14 @@
-package fr.upem.net.tcp.nonblocking;
+package fr.upem.net.tcp.nonblocking.reader;
 
 import java.nio.ByteBuffer;
 
-public class ByteReader implements Reader<Byte> {
+public class IntReader implements Reader<Integer> {
 
     private enum State {DONE,WAITING,ERROR};
 
     private State state = State.WAITING;
-    private final ByteBuffer internalbb = ByteBuffer.allocate(Byte.BYTES); // write-mode
-    private Byte value;
+    private final ByteBuffer internalbb = ByteBuffer.allocate(Integer.BYTES); // write-mode
+    private int value;
 
     @Override
     public ProcessStatus process(ByteBuffer bb) {
@@ -33,12 +33,12 @@ public class ByteReader implements Reader<Byte> {
         }
         state=State.DONE;
         internalbb.flip();
-        value=internalbb.get();
+        value=internalbb.getInt();
         return ProcessStatus.DONE;
     }
 
     @Override
-    public Byte get() {
+    public Integer get() {
         if (state!= State.DONE) {
             throw new IllegalStateException();
         }

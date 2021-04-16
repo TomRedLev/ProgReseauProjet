@@ -1,16 +1,18 @@
-package fr.upem.net.tcp.nonblocking;
+package fr.upem.net.tcp.nonblocking.reader;
 
 import java.nio.ByteBuffer;
 
+import fr.upem.net.tcp.nonblocking.frame.Request;
 
 
-public class MessageReader implements Reader<Message> {
 
-    private enum State {DONE,WAITINGLOGIN,WAITINGMESSAGE,ERROR};
+public class RequestReader implements Reader<Request> {
+
+    private enum State {DONE,WAITINGLOGIN, WAITINGLOGINTRGT, WAITINGMESSAGE,ERROR};
 
     private final StringReader reader = new StringReader();
     private State state = State.WAITINGLOGIN;
-    private Message msg = new Message();
+    private Request clients = new Request();
 
     @Override
     public ProcessStatus process(ByteBuffer bb) {
@@ -18,7 +20,21 @@ public class MessageReader implements Reader<Message> {
 	    	case WAITINGLOGIN :
 	    		switch(reader.process(bb)) {
 		    		case DONE :
-		    			msg.setLogin(reader.get());
+		    			clients.setLoginRequester(reader.get());
+		    			reader.reset();
+		    			state = State.WAITINGLOGINTRGT;
+		    			break;
+		    		case ERROR : 
+		    			state = State.ERROR;
+		    			return ProcessStatus.ERROR;
+		    		case REFILL :
+		    			return ProcessStatus.REFILL;
+		    			
+	    		}
+	    	case WAITINGLOGINTRGT :
+	    		switch(reader.process(bb)) {
+		    		case DONE :
+		    			clients.setLoginTarget(reader.get());
 		    			reader.reset();
 		    			state = State.WAITINGMESSAGE;
 		    			break;
@@ -29,29 +45,17 @@ public class MessageReader implements Reader<Message> {
 		    			return ProcessStatus.REFILL;
 		    			
 	    		}
-	    	case WAITINGMESSAGE : 
-	    		switch (reader.process(bb)) {
-	    			case DONE : 
-	    				msg.setStr(reader.get());
-	    				state = State.DONE;
-	    				return ProcessStatus.DONE;
-	    			case ERROR :
-	    				state = State.ERROR;
-	    				return ProcessStatus.ERROR;
-	    			case REFILL :
-	    				return ProcessStatus.REFILL;
-	    		}
 	    	default :
 	    		throw new IllegalStateException();
     	}
     }
 
     @Override
-    public Message get() {
+    public Request get() {
     	if (state!= State.DONE) {
             throw new IllegalStateException();
         }
-        return msg;
+        return clients;
     }
 
     @Override

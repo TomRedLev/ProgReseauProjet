@@ -14,7 +14,13 @@ import java.util.Scanner;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.logging.Logger;
 
-import fr.upem.net.tcp.nonblocking.Reader.ProcessStatus;
+import fr.upem.net.tcp.nonblocking.frame.Request;
+import fr.upem.net.tcp.nonblocking.frame.Message;
+import fr.upem.net.tcp.nonblocking.reader.ByteReader;
+import fr.upem.net.tcp.nonblocking.reader.RequestReader;
+import fr.upem.net.tcp.nonblocking.reader.MessageReader;
+import fr.upem.net.tcp.nonblocking.reader.Reader;
+import fr.upem.net.tcp.nonblocking.reader.Reader.ProcessStatus;
 
 public class ClientChat {
 
@@ -28,6 +34,7 @@ public class ClientChat {
         final private Queue<ByteBuffer> queue = new LinkedList<>(); // buffers read-mode
         final private MessageReader messageReader = new MessageReader();
         final private ByteReader byteReader = new ByteReader();
+        final private RequestReader clientsReader = new RequestReader();
         private boolean closed = false;
         
         private int connectID = 0;
@@ -60,19 +67,20 @@ public class ClientChat {
         	   			byteReader.reset();
         	   	   } 
         		   switch (OPcode) {
-        		   	   case 1 :
-        		   		   System.out.println("You are connected as " + client.login + " !");
-        		   		   connected = true;
-        		   		   break;
-        		   	   case 2 : 
-        		   		   if (waitingPacket) {
-        		   			   client.login = client.login.split("#")[0];
-         		   		   	   connectID += 1;
-         		   		   	   client.login = client.login + "#" + connectID;
-         		   		   	   waitingPacket = false;
-        		   		   }
-        		   		   break;
-        		   		   
+	    		   	   case 1 :
+	    		   		   System.out.println("You are connected as " + client.login + " !");
+	    		   		   connected = true;
+	    		   		   waitingPacket = false;
+	    		   		   break;
+	    		   	   case 2 : 
+	    		   		   if (waitingPacket) {
+	    		   			   client.login = client.login.split("#")[0];
+	     		   		   	   connectID += 1;
+	     		   		   	   client.login = client.login + "#" + connectID;
+	     		   		   	   waitingPacket = false;
+	    		   		   }
+	    		   		   break;
+	    		   		   
 	        		   case 3 :
 	        			   byteReader.reset();
 	        			   Reader.ProcessStatus status = messageReader.process(bbin);
@@ -105,10 +113,36 @@ public class ClientChat {
 	                		   return ;
 	                	   }
 	                	   break;
+	        		   case 5 :
+						   byteReader.reset();
+						   Reader.ProcessStatus statusPC = clientsReader.process(bbin);
+						   if (statusPC == ProcessStatus.DONE) {
+							   Request msg =  clientsReader.get();
+							   System.out.println("Request from " + msg.getLoginRequester() + " : " + msg.getLoginTarget());
+							   clientsReader.reset();
+						   }
+						   else if (statusPC == ProcessStatus.REFILL) {
+							   return;
+						   }
+						   else if (statusPC == ProcessStatus.ERROR) {
+							   silentlyClose();
+							   return ;
+						   }
+						   break;
+					   case 6 :
+						   break;
+					   case 7 :
+						   break;
+					   case 8 :
+						   break;
+					   case 9 :
+						   break;
+					   case 10 :
+						   break;
 	        		   case 127 :
 	        			   break;
 	                   default : 
-	                	   System.out.println("This OP code isn't allowed");
+	                	   //System.out.println("This OP code isn't allowed");
         		   }
         	   }
         	   else if (statusOP == ProcessStatus.REFILL) {
@@ -286,7 +320,7 @@ public class ClientChat {
      */
 
     private void processCommands(){
-    	if (!uniqueContext.connected) {
+    	if (!uniqueContext.connected && !uniqueContext.waitingPacket) {
     		var bbLog = UTF8_CHARSET.encode(login);
     		var bb = ByteBuffer.allocate(1 + bbLog.remaining() + Integer.BYTES);
     		bb.put((byte) 0);
@@ -301,7 +335,7 @@ public class ClientChat {
         	var bbLog = UTF8_CHARSET.encode(login);
         	var bbStr = UTF8_CHARSET.encode(msg);
         	var bb = ByteBuffer.allocate(1 + bbLog.remaining() + bbStr.remaining() + Integer.BYTES * 2);
-        	if (msg.startsWith("/")) {
+        	if (msg.startsWith("@")) {
         		var sb = new StringBuilder(msg);
         		sb.deleteCharAt(0);
         		msg = sb.toString();
@@ -314,14 +348,26 @@ public class ClientChat {
             	bb.put(bbLog);
             	bb.putInt(bbLogTarget.remaining());
             	bb.put(bbLogTarget);
+            	bb.putInt(bbStr.remaining());
+            	bb.put(bbStr);
+        	} else if (msg.startsWith("/")) {
+        		var sb = new StringBuilder(msg);
+        		sb.deleteCharAt(0);
+        		msg = sb.toString();
+        		var bbLogTarget = UTF8_CHARSET.encode(msg);
+        		bb = ByteBuffer.allocate(1 + bbLog.remaining() + bbLogTarget.remaining() + Integer.BYTES * 2);
+        		bb.put((byte) 5);
+        		bb.putInt(bbLog.remaining());
+            	bb.put(bbLog);
+            	bb.putInt(bbLogTarget.remaining());
+            	bb.put(bbLogTarget);
         	} else {
         		bb.put((byte) 3);
         		bb.putInt(bbLog.remaining());
             	bb.put(bbLog);
+            	bb.putInt(bbStr.remaining());
+            	bb.put(bbStr);
         	}
-        	
-        	bb.putInt(bbStr.remaining());
-        	bb.put(bbStr);
         	bb.flip();
         	uniqueContext.queueMessage(bb);
         }

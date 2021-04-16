@@ -1,6 +1,6 @@
-package fr.upem.net.tcp.nonblocking;
+package fr.upem.net.tcp.nonblocking.frame;
 
-public class Message {
+public class Message implements Frame {
 	private String login;
 	private String str;
 	

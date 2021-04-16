@@ -7,13 +7,23 @@ import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import fr.upem.net.tcp.nonblocking.Reader.ProcessStatus;
+import fr.upem.net.tcp.nonblocking.frame.Request;
+import fr.upem.net.tcp.nonblocking.frame.Message;
+import fr.upem.net.tcp.nonblocking.frame.PM;
+import fr.upem.net.tcp.nonblocking.reader.ByteReader;
+import fr.upem.net.tcp.nonblocking.reader.RequestReader;
+import fr.upem.net.tcp.nonblocking.reader.MessageReader;
+import fr.upem.net.tcp.nonblocking.reader.PMReader;
+import fr.upem.net.tcp.nonblocking.reader.Reader;
+import fr.upem.net.tcp.nonblocking.reader.StringReader;
+import fr.upem.net.tcp.nonblocking.reader.Reader.ProcessStatus;
 
 public class ServerChat {
 
@@ -31,6 +41,7 @@ public class ServerChat {
         private final ByteReader byteReader = new ByteReader();
         private final StringReader stringReader = new StringReader();
         private final PMReader PMReader = new PMReader();
+        private final RequestReader clientsReader = new RequestReader();
         
         private boolean closed = false;
         private boolean connected = false;
@@ -68,11 +79,11 @@ public class ServerChat {
 								case DONE : 
 									if (!connected) {
 										var login = stringReader.get();
-							    		if (!server.clientsName.contains(login)) {
+							    		if (!server.clients.containsKey(login)) {
 							    			System.out.println("Connection accepted");
 							    			bbout.clear();
 							    			bbout.put((byte) 1);
-							    			server.clientsName.add(login);
+							    			server.clients.put(login, this);
 							    			clientName = login;
 							    			connected = true;
 							    			updateInterestOps();
@@ -124,10 +135,37 @@ public class ServerChat {
 						    		return;
 							}
 							break;
+						case 5 :
+							byteReader.reset();
+							   Reader.ProcessStatus statusPC = clientsReader.process(bbin);
+							   if (statusPC == ProcessStatus.DONE) {
+								   Request request =  clientsReader.get();
+								   System.out.println("Request from " + request.getLoginRequester() + " : " + request.getLoginTarget());
+								   server.sendRequest(request);
+								   clientsReader.reset();
+							   }
+							   else if (statusPC == ProcessStatus.REFILL) {
+								   return;
+							   }
+							   else if (statusPC == ProcessStatus.ERROR) {
+								   silentlyClose();
+								   return ;
+							   }
+							break;
+						case 6 :
+							break;
+						case 7 :
+							break;
+						case 8 :
+							break;
+						case 9 :
+							break;
+						case 10 :
+							break;
 						case 127 :
 							break;
 						default : 
-							System.out.println("This OP code isn't allowed");
+							//System.out.println("This OP code isn't allowed");
 					}
          	   	}
          	   else if (statusOP == ProcessStatus.REFILL) {
@@ -167,6 +205,7 @@ public class ServerChat {
                     queue.remove();
                     if (!pm) {
                     	bbout.put((byte) 3);
+                    	
                     } else {
                     	bbout.put((byte) 4);
                     }
@@ -174,6 +213,7 @@ public class ServerChat {
                     bbout.put(bbLog);
                     bbout.putInt(str.length());
                     bbout.put(bb);
+                    
                 }
             }
         }
@@ -251,7 +291,7 @@ public class ServerChat {
 
     private final ServerSocketChannel serverSocketChannel;
     private final Selector selector;
-    private final ArrayList<String> clientsName = new ArrayList<>();
+    private final HashMap<String, Context> clients = new HashMap<>();
 
     public ServerChat(int port) throws IOException {
         serverSocketChannel = ServerSocketChannel.open();
@@ -262,13 +302,22 @@ public class ServerChat {
     public void sendPM(PM msg) {
     	for (var key : selector.keys()) {
     		var ctxt = (Context) key.attachment();
-    		if (ctxt != null) {
-    			System.out.println(msg.getLoginTarget() + " " + ctxt.clientName);
-    		}
     		if (ctxt != null && ctxt.clientName.equals(msg.getLoginTarget())) {
     			var message = new Message();
     			message.setLogin(msg.getLoginSender());
     			message.setStr(msg.getStr());
+        		ctxt.queueMessage(message, true);
+    		}
+    	}
+	}
+    
+    public void sendRequest(Request request) {
+    	for (var key : selector.keys()) {
+    		var ctxt = (Context) key.attachment();
+    		if (ctxt != null && ctxt.clientName.equals(request.getLoginTarget())) {
+    			var message = new Message();
+    			message.setLogin(request.getLoginRequester());
+    			message.setStr(request.getLoginTarget());
         		ctxt.queueMessage(message, true);
     		}
     	}

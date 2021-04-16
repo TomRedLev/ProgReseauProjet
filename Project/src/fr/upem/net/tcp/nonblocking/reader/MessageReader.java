@@ -1,16 +1,18 @@
-package fr.upem.net.tcp.nonblocking;
+package fr.upem.net.tcp.nonblocking.reader;
 
 import java.nio.ByteBuffer;
 
+import fr.upem.net.tcp.nonblocking.frame.Message;
 
 
-public class PMReader implements Reader<PM> {
 
-    private enum State {DONE,WAITINGLOGIN, WAITINGLOGINTRGT, WAITINGMESSAGE,ERROR};
+public class MessageReader implements Reader<Message> {
+
+    private enum State {DONE,WAITINGLOGIN,WAITINGMESSAGE,ERROR};
 
     private final StringReader reader = new StringReader();
     private State state = State.WAITINGLOGIN;
-    private PM msg = new PM();
+    private Message msg = new Message();
 
     @Override
     public ProcessStatus process(ByteBuffer bb) {
@@ -18,21 +20,7 @@ public class PMReader implements Reader<PM> {
 	    	case WAITINGLOGIN :
 	    		switch(reader.process(bb)) {
 		    		case DONE :
-		    			msg.setLoginSender(reader.get());
-		    			reader.reset();
-		    			state = State.WAITINGLOGINTRGT;
-		    			break;
-		    		case ERROR : 
-		    			state = State.ERROR;
-		    			return ProcessStatus.ERROR;
-		    		case REFILL :
-		    			return ProcessStatus.REFILL;
-		    			
-	    		}
-	    	case WAITINGLOGINTRGT :
-	    		switch(reader.process(bb)) {
-		    		case DONE :
-		    			msg.setLoginTarget(reader.get());
+		    			msg.setLogin(reader.get());
 		    			reader.reset();
 		    			state = State.WAITINGMESSAGE;
 		    			break;
@@ -61,7 +49,7 @@ public class PMReader implements Reader<PM> {
     }
 
     @Override
-    public PM get() {
+    public Message get() {
     	if (state!= State.DONE) {
             throw new IllegalStateException();
         }
