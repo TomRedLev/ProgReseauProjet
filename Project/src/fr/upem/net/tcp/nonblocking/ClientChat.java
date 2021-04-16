@@ -32,6 +32,7 @@ public class ClientChat {
         
         private int connectID = 0;
         private boolean connected = false;
+        private boolean waitingPacket = false;
         private byte OPcode = 127;
 
         private Context(ClientChat client, SelectionKey key){
@@ -57,20 +58,21 @@ public class ClientChat {
         		   if (OPcode == 127) {
         	   			OPcode = byteReader.get();
         	   			byteReader.reset();
-        	   		}
-        		   System.out.println(OPcode);  
+        	   	   } 
         		   switch (OPcode) {
         		   	   case 1 :
-        		   		   System.out.println("You are connected !");
+        		   		   System.out.println("You are connected as " + client.login + " !");
         		   		   connected = true;
         		   		   break;
         		   	   case 2 : 
-        		   		   System.out.println("This login is already taken, an int will be added at the end : ");
-        		   		   client.login = client.login.split("#")[0];
-        		   		   connectID += 1;
-        		   		   client.login = client.login + "#" + connectID;
-        		   		   System.out.println("Now, you are : " + client.login);
+        		   		   if (waitingPacket) {
+        		   			   client.login = client.login.split("#")[0];
+         		   		   	   connectID += 1;
+         		   		   	   client.login = client.login + "#" + connectID;
+         		   		   	   waitingPacket = false;
+        		   		   }
         		   		   break;
+        		   		   
 	        		   case 3 :
 	        			   byteReader.reset();
 	        			   Reader.ProcessStatus status = messageReader.process(bbin);
@@ -291,6 +293,7 @@ public class ClientChat {
     		bb.putInt(bbLog.remaining());
     		bb.put(bbLog);
     		bb.flip();
+    		uniqueContext.waitingPacket = true;
     		uniqueContext.queueMessage(bb);
     	}
         while (!commandQueue.isEmpty()) {

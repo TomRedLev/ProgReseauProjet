@@ -61,7 +61,6 @@ public class ServerChat {
          	   			OPcode = byteReader.get();
          	   			byteReader.reset();
          	   		}
-         	   		System.out.println(OPcode);
 					switch (OPcode) {
 						case 0 :
 							Reader.ProcessStatus statusString = stringReader.process(bbin);
@@ -110,6 +109,7 @@ public class ServerChat {
 							}
 						   	break;
 						case 4 :
+							System.out.println("PM");
 							Reader.ProcessStatus statusPM = PMReader.process(bbin);
 							switch (statusPM){
 						    	case DONE:
@@ -262,6 +262,9 @@ public class ServerChat {
     public void sendPM(PM msg) {
     	for (var key : selector.keys()) {
     		var ctxt = (Context) key.attachment();
+    		if (ctxt != null) {
+    			System.out.println(msg.getLoginTarget() + " " + ctxt.clientName);
+    		}
     		if (ctxt != null && ctxt.clientName.equals(msg.getLoginTarget())) {
     			var message = new Message();
     			message.setLogin(msg.getLoginSender());
