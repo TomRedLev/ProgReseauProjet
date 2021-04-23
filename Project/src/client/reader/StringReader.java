@@ -1,4 +1,4 @@
-package fr.upem.net.tcp.nonblocking.reader;
+package client.reader;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;

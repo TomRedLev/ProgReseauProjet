@@ -1,4 +1,4 @@
-package fr.upem.net.tcp.nonblocking.client;
+package client;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -14,13 +14,13 @@ import java.util.Scanner;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.logging.Logger;
 
-import fr.upem.net.tcp.nonblocking.frame.Request;
-import fr.upem.net.tcp.nonblocking.frame.Message;
-import fr.upem.net.tcp.nonblocking.reader.ByteReader;
-import fr.upem.net.tcp.nonblocking.reader.RequestReader;
-import fr.upem.net.tcp.nonblocking.reader.MessageReader;
-import fr.upem.net.tcp.nonblocking.reader.Reader;
-import fr.upem.net.tcp.nonblocking.reader.Reader.ProcessStatus;
+import client.reader.ByteReader;
+import client.reader.MessageReader;
+import client.reader.Reader;
+import client.reader.RequestReader;
+import client.reader.Reader.ProcessStatus;
+import client.frame.Request;
+import client.frame.Message;
 
 public class ClientChat {
 

@@ -1,8 +1,8 @@
-package fr.upem.net.tcp.nonblocking.reader;
+package client.reader;
 
 import java.nio.ByteBuffer;
 
-import fr.upem.net.tcp.nonblocking.frame.*;
+import client.frame.*;
 
 public class FrameReader implements Reader<Frame> {
 	private enum State {DONE,WAITING,ERROR};

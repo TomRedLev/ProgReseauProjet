@@ -1,4 +1,4 @@
-package fr.upem.net.tcp.nonblocking.server;
+package server;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -14,16 +14,16 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import fr.upem.net.tcp.nonblocking.frame.Request;
-import fr.upem.net.tcp.nonblocking.frame.Message;
-import fr.upem.net.tcp.nonblocking.frame.PM;
-import fr.upem.net.tcp.nonblocking.reader.ByteReader;
-import fr.upem.net.tcp.nonblocking.reader.RequestReader;
-import fr.upem.net.tcp.nonblocking.reader.MessageReader;
-import fr.upem.net.tcp.nonblocking.reader.PMReader;
-import fr.upem.net.tcp.nonblocking.reader.Reader;
-import fr.upem.net.tcp.nonblocking.reader.StringReader;
-import fr.upem.net.tcp.nonblocking.reader.Reader.ProcessStatus;
+import server.reader.ByteReader;
+import server.reader.MessageReader;
+import server.reader.PMReader;
+import server.reader.Reader;
+import server.reader.RequestReader;
+import server.reader.StringReader;
+import server.reader.Reader.ProcessStatus;
+import server.frame.Request;
+import server.frame.Message;
+import server.frame.PM;
 
 public class ServerChat {
 
@@ -404,7 +404,7 @@ public class ServerChat {
     }
 
     private static void usage(){
-        System.out.println("Usage : ServerSumBetter port");
+        System.out.println("Usage : ServerChat port");
     }
 
 	/***

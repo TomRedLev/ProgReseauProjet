@@ -1,8 +1,8 @@
-package fr.upem.net.tcp.nonblocking.reader;
+package client.reader;
 
 import java.nio.ByteBuffer;
 
-import fr.upem.net.tcp.nonblocking.frame.Message;
+import client.frame.Message;
 
 
 
