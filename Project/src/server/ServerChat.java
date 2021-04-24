@@ -48,6 +48,12 @@ public class ServerChat {
         private String clientName = "";
         private byte OPcode = 127;
 
+        /**
+         * Create a context from the server.
+         * 
+         * @param server
+         * @param key
+         */
         private Context(ServerChat server, SelectionKey key){
             this.key = key;
             this.sc = (SocketChannel) key.channel();
@@ -244,6 +250,9 @@ public class ServerChat {
 			key.interestOps(newInterestOps);
         }
 
+        /**
+         * Silently close the context.
+         */
         private void silentlyClose() {
             try {
                 sc.close();
@@ -293,12 +302,21 @@ public class ServerChat {
     private final Selector selector;
     private final HashMap<String, Context> clients = new HashMap<>();
 
+    /**
+     * Create a server chat.
+     * @param port
+     * @throws IOException
+     */
     public ServerChat(int port) throws IOException {
         serverSocketChannel = ServerSocketChannel.open();
         serverSocketChannel.bind(new InetSocketAddress(port));
         selector = Selector.open();
     }
 
+    /**
+     * Use to send a private message to another client.
+     * @param msg
+     */
     public void sendPM(PM msg) {
     	for (var key : selector.keys()) {
     		var ctxt = (Context) key.attachment();
@@ -311,6 +329,10 @@ public class ServerChat {
     	}
 	}
     
+    /**
+     * Send a request of connection.
+     * @param request
+     */
     public void sendRequest(Request request) {
     	for (var key : selector.keys()) {
     		var ctxt = (Context) key.attachment();
@@ -323,6 +345,10 @@ public class ServerChat {
     	}
 	}
 
+    /**
+     * Launch the server.
+     * @throws IOException
+     */
 	public void launch() throws IOException {
 		serverSocketChannel.configureBlocking(false);
 		serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
@@ -338,6 +364,10 @@ public class ServerChat {
 		}
     }
 
+	/**
+	 * Treat each key of the selector.
+	 * @param key
+	 */
 	private void treatKey(SelectionKey key) {
 		printSelectedKey(key); // for debug
 		try {
@@ -361,6 +391,11 @@ public class ServerChat {
 		}
 	}
 
+	/**
+	 * Accept a connection from a client.
+	 * @param key
+	 * @throws IOException
+	 */
     private void doAccept(SelectionKey key) throws IOException {
     	SocketChannel sc = serverSocketChannel.accept();
 		if (sc == null) {
@@ -372,6 +407,10 @@ public class ServerChat {
 		clientKey.attach(new Context(this, clientKey));
     }
 
+    /**
+     * Silently close the server.
+     * @param key
+     */
     private void silentlyClose(SelectionKey key) {
         Channel sc = (Channel) key.channel();
         try {
@@ -395,6 +434,12 @@ public class ServerChat {
     	}
     }
 
+    /**
+     * Main function of the server
+     * @param args
+     * @throws NumberFormatException
+     * @throws IOException
+     */
     public static void main(String[] args) throws NumberFormatException, IOException {
         if (args.length!=1){
             usage();
@@ -403,6 +448,9 @@ public class ServerChat {
         new ServerChat(Integer.parseInt(args[0])).launch();
     }
 
+    /**
+     * Tell how to use the server.
+     */
     private static void usage(){
         System.out.println("Usage : ServerChat port");
     }
@@ -411,6 +459,11 @@ public class ServerChat {
 	 *  Theses methods are here to help understanding the behavior of the selector
 	 ***/
 
+    /**
+     * Convert an interest ops to string.
+     * @param key
+     * @return
+     */
 	private String interestOpsToString(SelectionKey key){
 		if (!key.isValid()) {
 			return "CANCELLED";
@@ -423,6 +476,9 @@ public class ServerChat {
 		return String.join("|",list);
 	}
 
+	/**
+	 * Print keys in the selector.
+	 */
 	public void printKeys() {
 		Set<SelectionKey> selectionKeySet = selector.keys();
 		if (selectionKeySet.isEmpty()) {
@@ -441,6 +497,11 @@ public class ServerChat {
 		}
 	}
 
+	/**
+	 * Convert a remote address to string.
+	 * @param sc
+	 * @return
+	 */
 	private String remoteAddressToString(SocketChannel sc) {
 		try {
 			return sc.getRemoteAddress().toString();
@@ -448,7 +509,11 @@ public class ServerChat {
 			return "???";
 		}
 	}
-
+	
+	/**
+	 * Print the selected keys.
+	 * @param key
+	 */
 	public void printSelectedKey(SelectionKey key) {
 		SelectableChannel channel = key.channel();
 		if (channel instanceof ServerSocketChannel) {
@@ -459,6 +524,11 @@ public class ServerChat {
 		}
 	}
 
+	/**
+	 * Print the possible actions from the key selected.
+	 * @param key
+	 * @return
+	 */
 	private String possibleActionsToString(SelectionKey key) {
 		if (!key.isValid()) {
 			return "CANCELLED";

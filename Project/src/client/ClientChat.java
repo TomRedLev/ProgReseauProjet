@@ -253,6 +253,11 @@ public class ClientChat {
             updateInterestOps();
         }
 
+        /**
+         * Performs the connect action on sc.
+         * 
+         * @throws IOException
+         */
         public void doConnect() throws IOException {
             if (!sc.finishConnect())
             	return ;
@@ -282,6 +287,9 @@ public class ClientChat {
         this.console = new Thread(this::consoleRun);
     }
 
+    /**
+     * Run the console behind to get messsages from the client (multithreading).
+     */
     private void consoleRun() {
         try (var scan = new Scanner(System.in)) { 
         	while (!uniqueContext.connected) {
@@ -373,6 +381,11 @@ public class ClientChat {
         }
     }
 
+    /**
+     * Launch the client.
+     * 
+     * @throws IOException
+     */
     public void launch() throws IOException {
         sc.configureBlocking(false);
         var key = sc.register(selector, SelectionKey.OP_CONNECT);
@@ -392,6 +405,11 @@ public class ClientChat {
         }
     }
 
+    /**
+     * Treat each key of the selector.
+     * 
+     * @param key
+     */
     private void treatKey(SelectionKey key) {
         try {
             if (key.isValid() && key.isConnectable()) {
@@ -420,6 +438,13 @@ public class ClientChat {
 //    }
 
 
+    /**
+     * Main function of the client 
+     * 
+     * @param args
+     * @throws NumberFormatException
+     * @throws IOException
+     */
     public static void main(String[] args) throws NumberFormatException, IOException {
         if (args.length!=3){
             usage();
@@ -427,7 +452,10 @@ public class ClientChat {
         }
         new ClientChat(args[0],new InetSocketAddress(args[1],Integer.parseInt(args[2]))).launch();
     }
-
+    
+    /**
+     * Tell how to use the program.
+     */
     private static void usage(){
         System.out.println("Usage : ClientChat login hostname port");
     }
