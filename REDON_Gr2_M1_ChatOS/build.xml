@@ -1,0 +1,51 @@
+<project name="ChatOS" default="dist" basedir=".">
+    <description>
+    Build the client and server of ChatOS Project
+    </description>
+    <!-- set global properties for this build -->
+    <property name="srcClient" location="src/client" />
+    <property name="srcServer" location="src/server" />
+    <property name="buildClient" location="build_client" />
+    <property name="buildServer" location="build_server" />
+    <property name="dist" location="dist" />
+    <property name="version" value="1.0" />
+
+    <target name="init">
+        <!-- Create the time stamp -->
+        <tstamp />
+        <!-- Create the build directory structure used by compile -->
+        <mkdir dir="${buildClient}" />
+        <mkdir dir="${buildServer}" />
+    </target>
+
+    <target name="compile" depends="init" description="compile the source">
+        <!-- Compile the java code from ${src} into ${build} -->
+        <javac srcdir="${srcClient}" destdir="${buildClient}" />
+        <javac srcdir="${srcServer}" destdir="${buildServer}" />
+    </target>
+
+    <target name="dist" depends="compile" description="generate the distribution">
+        <buildnumber />
+        <!-- Create the distribution directory -->
+        <mkdir dir="${dist}/lib" />
+
+        <jar destfile="${dist}/lib/ChatOSClient-${version}.${build.number}.jar" basedir="${buildClient}">
+            <manifest>
+                <attribute name="Main-Class" value="client.ClientChat"/>
+            </manifest>
+        </jar>
+
+        <jar destfile="${dist}/lib/ChatOSServer-${version}.${build.number}.jar" basedir="${buildServer}">
+            <manifest>
+                <attribute name="Main-Class" value="server.ServerChat"/>
+            </manifest>
+        </jar>
+    </target>
+
+    <target name="clean" description="clean up">
+        <!-- Delete the ${build} and ${dist} directory trees -->
+        <delete dir="${buildClient}" />
+        <delete dir="${buildServer}" />
+        <delete dir="${dist}" />
+    </target>
+</project>
